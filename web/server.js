@@ -306,11 +306,11 @@ function handleMessage(userId, data) {
 
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '127.0.0.1'; // 只監聽本地地址
+const HOST = process.env.HOST || '0.0.0.0'; // 監聽所有接口，允許外網訪問
 
 server.listen(PORT, HOST, () => {
     console.log(`🌐 Web 伺服器運行在 http://${HOST}:${PORT}`);
-    console.log(`🔒 僅限本地訪問，外網無法連接`);
+    console.log(`🌍 外網可訪問，請確保防火牆已開放端口 ${PORT}`);
     console.log(`🧪 測試頁面: http://${HOST}:${PORT}/test`);
     console.log(`🔧 調試頁面: http://${HOST}:${PORT}/debug`);
     console.log(`🔍 找回ID頁面: http://${HOST}:${PORT}/find-id`);
