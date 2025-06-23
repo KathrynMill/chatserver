@@ -1,251 +1,50 @@
-# 聊天伺服器專案
+# C++ Crow 最小多線程 WebSocket/HTTP Demo
 
-可以工作在 nginx tcp 負載均衡環境中的集群聊天伺服器和客戶端源碼，基於 muduo 實現。
+## 項目簡介
+本項目基於 [Crow](https://github.com/CrowCpp/Crow) 框架，實現了一個最小的多線程 C++ Web 服務，支持 HTTP 路由和 WebSocket echo。
 
-## 專案特色
+## 依賴
+- C++17 編譯器
+- Boost (>=1.64，需 boost_system)
+- OpenSSL
 
-### 原始 C++ 版本
-- 🚀 基於 muduo 網路庫的高性能 C++ 聊天伺服器
-- 💬 支援私人聊天和群組聊天
-- 👥 好友管理和群組管理
-- 🗄️ MySQL 資料庫支援
-- 🔄 Redis 快取支援
-- ⚖️ 支援 nginx tcp 負載均衡
-
-### 新增網頁版本 🌟
-- 🌐 現代化 Web 介面
-- 📱 響應式設計，支援手機和桌面
-- 🔐 JWT 認證系統
-- 💬 即時 WebSocket 通訊
-- 👤 用戶註冊和登入
-- 🎨 美觀的 UI 設計
-- 🌍 支援公開訪問（讓其他人也能使用）
-
-## 快速開始
-
-### 方法一：使用整合啟動器（推薦）
-
+安裝依賴（以 CentOS/Ubuntu 為例）：
 ```bash
-./start_web_chat.sh
+# CentOS
+sudo yum install boost-devel openssl-devel
+# Ubuntu
+sudo apt-get install libboost-all-dev libssl-dev
 ```
 
-選擇選項：
-- `1` - 運行原始 C++ 聊天伺服器
-- `2` - 運行網頁版聊天應用程式
-- `3` - 同時運行兩個伺服器
-- `4` - 退出
-
-### 方法二：分別啟動
-
-#### 運行 C++ 版本
+## 編譯
 ```bash
-# 編譯專案
-./autobuild.sh
-
-# 啟動伺服器
-./bin/ChatServer 127.0.0.1 6000
-
-# 啟動客戶端
-./bin/ChatClient 127.0.0.1 6000
+mkdir -p build
+cmake -B build -S .
+cmake --build build --target web_server_minimal -j4
 ```
 
-#### 運行網頁版本
-
-**本地訪問（僅限本機）：**
+## 運行
 ```bash
-# 進入 web 目錄
-cd web
-
-# 安裝依賴並啟動
-./start.sh
+./bin/web_server_minimal
 ```
 
-然後在瀏覽器中訪問 `http://localhost:3000`
-
-**本地訪問（推薦）：**
+## 測試
+### HTTP 測試
 ```bash
-# 啟動本地訪問伺服器
-./start_local.sh
+curl http://localhost:3000/
+# 返回: Hello, Crow minimal demo!
 ```
 
-然後在瀏覽器中訪問 `http://localhost:3000`
-
-**公開訪問（已關閉）：**
+### WebSocket 測試
+可用 [websocat](https://github.com/vi/websocat) 或瀏覽器 ws 客戶端：
 ```bash
-# 配置防火牆（需要 root 權限）
-sudo ./setup_firewall.sh
-
-# 啟動公開訪問伺服器
-./start_public.sh
+websocat ws://localhost:3000/ws
+# 發送: hello
+# 返回: echo: hello
 ```
 
-伺服器會顯示您的IP地址，其他人可以通過該地址訪問您的聊天應用程式。
-
-**關閉外網訪問：**
-```bash
-# 關閉外網訪問
-./close_public_access.sh
-```
-
-## 當前狀態
-
-🔒 **外網訪問已關閉**
-- 聊天應用程式僅限本地訪問
-- 外網無法連接您的伺服器
-- 防火牆端口 3000 已關閉
-- 伺服器只監聽 127.0.0.1:3000
-
-如需重新開啟外網訪問，請運行：
-```bash
-./start_public.sh
-```
-
-## 公開訪問設置
-
-### 步驟 1：配置防火牆
-```bash
-sudo ./setup_firewall.sh
-```
-
-### 步驟 2：啟動公開伺服器
-```bash
-./start_public.sh
-```
-
-### 步驟 3：分享訪問地址
-伺服器啟動後會顯示：
-- 本地訪問地址：`http://localhost:3000`
-- 本機訪問地址：`http://您的IP:3000`
-- 公網訪問地址：`http://公網IP:3000`
-
-### 重要提醒
-1. **防火牆設置**：確保端口 3000 已開放
-2. **雲伺服器**：如果使用雲伺服器，還需要在安全組中開放端口 3000
-3. **安全性**：目前是開發版本，建議在生產環境中使用 HTTPS
-4. **數據存儲**：用戶數據存儲在記憶體中，伺服器重啟後會丟失
-
-## 系統需求
-
-### C++ 版本
-- Linux 系統
-- CMake 3.10+
-- MySQL 5.7+
-- Redis 3.0+
-- muduo 網路庫
-
-### 網頁版本
-- Node.js 14+
-- npm 或 yarn
-
-## 功能對比
-
-| 功能 | C++ 版本 | 網頁版本 |
-|------|----------|----------|
-| 私人聊天 | ✅ | ✅ |
-| 群組聊天 | ✅ | ✅ |
-| 好友管理 | ✅ | ✅ |
-| 用戶註冊/登入 | ✅ | ✅ |
-| 資料庫支援 | ✅ MySQL | ❌ 記憶體存儲 |
-| Redis 快取 | ✅ | ❌ |
-| 負載均衡 | ✅ | ❌ |
-| 跨平台 | ❌ Linux | ✅ 所有平台 |
-| 易於部署 | ❌ 需要編譯 | ✅ 即開即用 |
-| 現代化 UI | ❌ 命令行 | ✅ 美觀介面 |
-
-## 目錄結構
-
-```
-chatserver/
-├── bin/                    # 編譯後的執行檔
-├── include/               # 頭文件
-├── src/                   # 源碼
-├── test/                  # 測試文件
-├── thirdparty/            # 第三方庫
-├── web/                   # 🌟 網頁版聊天應用程式
-│   ├── index.html         # 主頁面
-│   ├── styles.css         # 樣式文件
-│   ├── app.js            # 前端邏輯
-│   ├── server.js         # 後端伺服器
-│   ├── package.json      # Node.js 依賴
-│   ├── start.sh          # 啟動腳本
-│   └── README.md         # 網頁版說明
-├── autobuild.sh          # 編譯腳本
-├── start_web_chat.sh     # 🌟 整合啟動器
-└── README.md             # 本文件
-```
-
-## 網頁版詳細說明
-
-網頁版聊天應用程式提供了現代化的 Web 介面，具有以下特色：
-
-### 技術架構
-- **前端**: HTML5, CSS3, JavaScript (ES6+)
-- **後端**: Node.js, Express.js
-- **即時通訊**: WebSocket
-- **認證**: JWT (JSON Web Token)
-
-### 主要功能
-- 🔐 用戶註冊和登入
-- 💬 即時私人聊天
-- 👥 群組聊天
-- 👤 好友管理
-- 📱 響應式設計
-- 🔄 即時訊息同步
-
-### 使用方式
-1. 註冊新帳號或登入現有帳號
-2. 添加好友或創建群組
-3. 開始聊天！
-
-詳細使用說明請參考 `web/README.md`
-
-## 開發指南
-
-### 修改 C++ 版本
-1. 修改 `src/` 目錄下的源碼
-2. 重新編譯：`./autobuild.sh`
-3. 重啟伺服器
-
-### 修改網頁版本
-1. 修改 `web/` 目錄下的文件
-2. 重啟 Node.js 伺服器
-3. 刷新瀏覽器
-
-### 添加新功能
-- C++ 版本：在 `include/public.hpp` 中添加新的訊息類型
-- 網頁版本：在 `web/app.js` 中添加前端邏輯，在 `web/server.js` 中添加後端 API
-
-## 部署建議
-
-### 生產環境
-- C++ 版本：使用 Docker 容器化部署
-- 網頁版本：使用 PM2 或 Docker 部署
-- 建議使用 Nginx 作為反向代理
-
-### 開發環境
-- C++ 版本：直接運行編譯後的執行檔
-- 網頁版本：使用 `npm run dev` 進行開發
-
-## 故障排除
-
-### 常見問題
-1. **編譯失敗**: 檢查 muduo 庫是否正確安裝
-2. **資料庫連接失敗**: 檢查 MySQL 服務是否運行
-3. **WebSocket 連接失敗**: 檢查防火牆設置
-4. **端口被佔用**: 更改伺服器端口
-
-### 日誌查看
-- C++ 版本：查看終端輸出
-- 網頁版本：查看瀏覽器控制台和終端輸出
-
-## 授權
-
-MIT License
-
-## 貢獻
-
-歡迎提交 Issue 和 Pull Request！
+## 多線程
+- 默認啟動時自動使用多線程（根據 CPU 核心數）。
 
 ---
-
-**注意**: 網頁版本是對原始 C++ 專案的補充，提供了更現代化的用戶介面。兩個版本可以獨立運行，也可以同時運行。
+如需集成更完整的 C++ 業務邏輯，請逐步擴展本 demo。

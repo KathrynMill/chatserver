@@ -48,4 +48,16 @@ Thumbs.db
 
 # 用戶數據（如果有的話）
 user_data/
-data/ 
+data/
+
+# C++/CMake/Boost Crow 編譯產物忽略
+*.o
+*.obj
+*.so
+*.a
+*.exe
+*.out
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile 
