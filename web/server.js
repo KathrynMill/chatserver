@@ -15,6 +15,8 @@ app.use(express.static(path.join(__dirname)));
 // 模擬用戶數據庫
 const users = new Map();
 const connections = new Map();
+// 新增：模擬群組數據庫
+const groups = new Map();
 
 // JWT 密鑰
 const JWT_SECRET = 'your-secret-key';
@@ -303,6 +305,37 @@ function handleMessage(userId, data) {
             console.log('未知訊息類型:', data.type);
     }
 }
+
+// 新增：創建群組 API
+app.post('/api/groups/create', authenticateToken, (req, res) => {
+    const { groupName } = req.body;
+    const userId = req.user.userId;
+    if (!groupName || !userId) {
+        return res.json({ success: false, message: '群組名稱不能為空' });
+    }
+    // 檢查群組名稱是否已存在
+    for (let group of groups.values()) {
+        if (group.name === groupName) {
+            return res.json({ success: false, message: '群組名稱已存在' });
+        }
+    }
+    // 創建新群組
+    const groupId = Date.now().toString();
+    groups.set(groupId, {
+        id: groupId,
+        name: groupName,
+        members: [userId]
+    });
+    res.json({ success: true, message: '群組創建成功', groupId, groupName });
+});
+
+// 新增：獲取群組列表 API
+app.get('/api/groups', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+    // 只返回用戶所在的群組
+    const userGroups = Array.from(groups.values()).filter(g => g.members.includes(userId));
+    res.json({ success: true, groups: userGroups });
+});
 
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;

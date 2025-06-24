@@ -600,7 +600,6 @@ class ChatApp {
         title.textContent = '創建群組';
         body.innerHTML = `
             <input type="text" id="groupName" placeholder="群組名稱">
-            <input type="text" id="groupDesc" placeholder="群組描述">
             <button onclick="chatApp.createGroup()">創建</button>
             <button class="cancel" onclick="chatApp.hideModal()">取消</button>
         `;
@@ -647,7 +646,6 @@ class ChatApp {
 
     async createGroup() {
         const name = document.getElementById('groupName').value;
-        const desc = document.getElementById('groupDesc').value;
         
         if (!name) {
             alert('請輸入群組名稱');
@@ -661,7 +659,7 @@ class ChatApp {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('chatToken')}`
                 },
-                body: JSON.stringify({ name, desc })
+                body: JSON.stringify({ groupName: name })
             });
 
             const data = await response.json();
