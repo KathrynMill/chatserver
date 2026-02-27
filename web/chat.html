@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分布式聊天系统 - Web 客户端</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== 顶部状态栏 ===== */
+        .topbar {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .topbar .brand {
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .topbar .server-info {
+            font-size: 12px;
+            color: #aaa;
+        }
+        .topbar .server-info .dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        .dot.online { background: #00e676; box-shadow: 0 0 6px #00e676; }
+        .dot.offline { background: #ff5252; }
+
+        /* ===== 登录面板 ===== */
+        .login-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .login-box {
+            background: rgba(30,30,60,0.95);
+            border: 1px solid rgba(123,47,247,0.3);
+            border-radius: 16px;
+            padding: 40px;
+            width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 28px;
+            background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 24px;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .login-box input:focus {
+            border-color: #7b2ff7;
+        }
+        .login-box input::placeholder { color: #777; }
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #7b2ff7, #00d2ff);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .login-box button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(123,47,247,0.4);
+        }
+        .login-box .hint {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+        .login-error {
+            color: #ff5252;
+            font-size: 13px;
+            margin-bottom: 10px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        /* ===== 聊天区域主体 ===== */
+        .chat-wrapper {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* 左侧 */
+        .sidebar {
+            width: 260px;
+            background: rgba(255,255,255,0.03);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar .my-info {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 13px;
+        }
+        .sidebar .my-info strong { color: #00d2ff; }
+        .sidebar .section-title {
+            padding: 12px 16px 6px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+        }
+        .sidebar .chat-to {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar .chat-to input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .sidebar .chat-to input:focus { border-color: #7b2ff7; }
+        .sidebar .chat-to button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #7b2ff7;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .sidebar .chat-to button:hover { background: #6a1ff0; }
+        .contact-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .contact-item:hover { background: rgba(123,47,247,0.15); }
+        .contact-item.active { background: rgba(123,47,247,0.2); border-left: 3px solid #7b2ff7; }
+        .contact-item .contact-name { font-weight: 600; }
+        .contact-item .contact-id { font-size: 11px; color: #888; }
+
+        /* 右侧聊天主面 */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .msg {
+            max-width: 65%;
+            padding: 10px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .msg.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #7b2ff7, #5b1fd0);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .msg.received {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.08);
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        .msg .meta {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+        }
+        .msg.system-msg {
+            align-self: center;
+            max-width: 80%;
+            background: rgba(0,210,255,0.1);
+            color: #00d2ff;
+            font-size: 12px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        /* 输入条 */
+        .input-bar {
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.03);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            gap: 10px;
+        }
+        .input-bar input {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        .input-bar input:focus { border-color: #7b2ff7; }
+        .input-bar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #7b2ff7, #00d2ff);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .input-bar button:hover { transform: scale(1.03); }
+        .hidden { display: none !important; }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<!-- ===== 登录遮罩 ===== -->
+<div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+        <h2>💬 分布式聊天系统</h2>
+        <div class="login-error" id="loginError"></div>
+        <input type="number" id="loginId" placeholder="用户 ID（例如 1000）" autofocus>
+        <input type="password" id="loginPwd" placeholder="密码（例如 123）">
+        <button onclick="doLogin()">登 录</button>
+        <div class="hint">数据库中已有测试账号 1000 ~ 1100，密码为 123</div>
+    </div>
+</div>
+
+<!-- ===== 顶部状态栏 ===== -->
+<div class="topbar">
+    <div class="brand">💬 分布式聊天系统 · Web 客户端</div>
+    <div class="server-info">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">未连接</span>
+    </div>
+</div>
+
+<!-- ===== 聊天主体 ===== -->
+<div class="chat-wrapper">
+    <!-- 侧栏 -->
+    <div class="sidebar">
+        <div class="my-info" id="myInfo">未登录</div>
+        <div class="section-title">发起聊天</div>
+        <div class="chat-to">
+            <input type="number" id="targetIdInput" placeholder="对方用户 ID">
+            <button onclick="startChat()">聊天</button>
+        </div>
+        <div class="section-title">会话列表</div>
+        <div id="contactList"></div>
+    </div>
+
+    <!-- 聊天区 -->
+    <div class="chat-main">
+        <div class="chat-header" id="chatHeader">选择聊天对象</div>
+        <div class="messages" id="messages"></div>
+        <div class="input-bar">
+            <input type="text" id="msgInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendMsg()">
+            <button onclick="sendMsg()">发送 ✈</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ====== 全局状态 ======
+let ws = null;
+let myId = null;
+let myName = '';
+let currentChatId = null;
+// chatHistory[peerId] = [{from, msg, time}]
+const chatHistory = {};
+
+// ====== 消息ID映射（和 C++ 服务端的 public.hpp 对应）======
+const MSG_ID = {
+    LOGIN_MSG: 1,
+    LOGIN_MSG_ACK: 2,
+    REG_MSG: 3,
+    REG_MSG_ACK: 4,
+    ONE_CHAT_MSG: 5,
+    ADD_FRIEND_MSG: 6,
+    CREATE_GROUP_MSG: 7,
+    ADD_GROUP_MSG: 8,
+    GROUP_CHAT_MSG: 9,
+    LOGINOUT_MSG: 10,
+};
+
+// ====== WebSocket 连接 ======
+function connectWS() {
+    ws = new WebSocket(`ws://${location.hostname}:${location.port}`);
+
+    ws.onopen = () => {
+        setStatus(true, '网关已连接');
+    };
+
+    ws.onmessage = (evt) => {
+        let data;
+        try { data = JSON.parse(evt.data); } catch(e) { return; }
+        handleServerMsg(data);
+    };
+
+    ws.onclose = () => {
+        setStatus(false, '连接已断开');
+        setTimeout(connectWS, 3000);
+    };
+
+    ws.onerror = () => {
+        setStatus(false, '连接错误');
+    };
+}
+
+function setStatus(online, text) {
+    document.getElementById('statusDot').className = 'dot ' + (online ? 'online' : 'offline');
+    document.getElementById('statusText').textContent = text;
+}
+
+// ====== 登录 ======
+function doLogin() {
+    const id = parseInt(document.getElementById('loginId').value);
+    const pwd = document.getElementById('loginPwd').value;
+    if (!id || !pwd) {
+        document.getElementById('loginError').textContent = '请填写用户ID和密码';
+        return;
+    }
+    // 发送登录 JSON（和 C++ ChatServer 的协议完全一致）
+    const loginJson = JSON.stringify({
+        msgid: MSG_ID.LOGIN_MSG,
+        id: id,
+        password: pwd
+    });
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(loginJson);
+        myId = id;
+    } else {
+        document.getElementById('loginError').textContent = '尚未连接到服务器，请稍候重试';
+    }
+}
+
+// ====== 处理服务端消息 ======
+function handleServerMsg(data) {
+    // 系统消息（来自 gateway.js）
+    if (data.type === 'system') {
+        appendSystemMsg(data.msg);
+        return;
+    }
+
+    switch (data.msgid) {
+        case MSG_ID.LOGIN_MSG_ACK:
+            if (data.errno === 0) {
+                // 登录成功
+                myName = data.name || ('用户' + myId);
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('myInfo').innerHTML =
+                    `👤 <strong>${myName}</strong> (ID: ${myId})`;
+                setStatus(true, `已登录 · 经由 Nginx 负载均衡`);
+                appendSystemMsg(`欢迎回来, ${myName}！你已通过 Nginx(8000) 接入集群。`);
+
+                // 处理离线消息
+                if (data.offlinemsg && data.offlinemsg.length > 0) {
+                    data.offlinemsg.forEach(raw => {
+                        try {
+                            const offMsg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                            receiveChat(offMsg);
+                        } catch(e) {}
+                    });
+                }
+
+                // 处理好友列表
+                if (data.friends && data.friends.length > 0) {
+                    data.friends.forEach(f => {
+                        addContact(f.id, f.name, f.state);
+                    });
+                }
+            } else {
+                document.getElementById('loginError').textContent =
+                    data.errmsg || '登录失败';
+            }
+            break;
+
+        case MSG_ID.ONE_CHAT_MSG:
+            receiveChat(data);
+            break;
+
+        default:
+            console.log('未处理的消息:', data);
+    }
+}
+
+// ====== 收到私聊消息 ======
+function receiveChat(data) {
+    const fromId = String(data.id || data.fromid);
+    const msg = data.msg;
+    const time = data.time || new Date().toLocaleTimeString();
+
+    if (!chatHistory[fromId]) chatHistory[fromId] = [];
+    chatHistory[fromId].push({ from: fromId, msg, time });
+
+    // 确保联系人列表中有这个人
+    addContact(fromId, data.name || ('用户' + fromId));
+
+    // 如果正在和这个人聊天，实时渲染
+    if (currentChatId === fromId) {
+        renderMessages(fromId);
+    }
+
+    // 闪烁联系人
+    const el = document.querySelector(`.contact-item[data-id="${fromId}"]`);
+    if (el && currentChatId !== fromId) {
+        el.style.borderLeft = '3px solid #00e676';
+    }
+}
+
+// ====== 发送消息 ======
+function sendMsg() {
+    const input = document.getElementById('msgInput');
+    const msg = input.value.trim();
+    if (!msg || !currentChatId) return;
+
+    const chatJson = JSON.stringify({
+        msgid: MSG_ID.ONE_CHAT_MSG,
+        id: myId,
+        from: myName,
+        toid: parseInt(currentChatId),
+        msg: msg,
+        time: new Date().toLocaleTimeString()
+    });
+
+    ws.send(chatJson);
+
+    // 本地记录
+    if (!chatHistory[currentChatId]) chatHistory[currentChatId] = [];
+    chatHistory[currentChatId].push({
+        from: String(myId),
+        msg: msg,
+        time: new Date().toLocaleTimeString()
+    });
+    renderMessages(currentChatId);
+    input.value = '';
+}
+
+// ====== 联系人管理 ======
+function addContact(id, name, state) {
+    id = String(id);
+    if (id === String(myId)) return; // 不加自己
+    const list = document.getElementById('contactList');
+    if (list.querySelector(`[data-id="${id}"]`)) return; // 已存在
+
+    const div = document.createElement('div');
+    div.className = 'contact-item';
+    div.dataset.id = id;
+    div.innerHTML = `<span class="contact-name">${name || '用户' + id}</span>
+                     <span class="contact-id">ID: ${id} ${state === 'online' ? '🟢' : ''}</span>`;
+    div.onclick = () => switchChat(id, name);
+    list.appendChild(div);
+}
+
+function startChat() {
+    const targetId = document.getElementById('targetIdInput').value.trim();
+    if (!targetId) return;
+    addContact(targetId, '用户' + targetId);
+    switchChat(targetId, '用户' + targetId);
+    document.getElementById('targetIdInput').value = '';
+}
+
+function switchChat(id, name) {
+    currentChatId = String(id);
+    document.getElementById('chatHeader').textContent = `与 ${name || '用户' + id} 聊天 (ID: ${id})`;
+
+    // 高亮
+    document.querySelectorAll('.contact-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.id === currentChatId);
+        if (el.dataset.id === currentChatId) el.style.borderLeft = '';
+    });
+
+    renderMessages(currentChatId);
+}
+
+function renderMessages(peerId) {
+    const container = document.getElementById('messages');
+    const history = chatHistory[peerId] || [];
+    container.innerHTML = '';
+    history.forEach(m => {
+        const div = document.createElement('div');
+        const isMine = String(m.from) === String(myId);
+        div.className = 'msg ' + (isMine ? 'sent' : 'received');
+        div.innerHTML = `${m.msg}<div class="meta">${m.time || ''}</div>`;
+        container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendSystemMsg(text) {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg system-msg';
+    div.textContent = text;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ====== 启动 ======
+connectWS();
+</script>
+</body>
+</html>

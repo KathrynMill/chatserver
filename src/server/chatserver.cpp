@@ -43,20 +43,37 @@ void ChatServer::onConnection(const TcpConnectionPtr &conn)
 }
 
 // 上报读写事件相关信息的回调函数
+// 解决 TCP 粘包：一次 read 可能读到多条 JSON，需逐条拆分
 void ChatServer::onMessage(const TcpConnectionPtr &conn,
                            Buffer *buffer,
                            Timestamp time)
 {
     string buf = buffer->retrieveAllAsString();
 
-    // 测试，添加json打印代码
-    cout << buf << endl;
+    // 按花括号深度拆分出每一条完整的 JSON 报文
+    int depth = 0;
+    size_t start = 0;
+    for (size_t i = 0; i < buf.size(); ++i)
+    {
+        if (buf[i] == '{') ++depth;
+        else if (buf[i] == '}') --depth;
 
-    // 数据的反序列化
-    json js = json::parse(buf);
-    // 达到的目的：完全解耦网络模块的代码和业务模块的代码
-    // 通过js["msgid"] 获取=》业务handler=》conn  js  time
-    auto msgHandler = ChatService::instance()->getHandler(js["msgid"].get<int>());
-    // 回调消息绑定好的事件处理器，来执行相应的业务处理
-    msgHandler(conn, js, time);
+        if (depth == 0 && i > start)
+        {
+            string single = buf.substr(start, i - start + 1);
+            start = i + 1;
+
+            try
+            {
+                json js = json::parse(single);
+                cout << single << endl;
+                auto msgHandler = ChatService::instance()->getHandler(js["msgid"].get<int>());
+                msgHandler(conn, js, time);
+            }
+            catch (const std::exception &e)
+            {
+                cerr << "JSON parse error: " << e.what() << endl;
+            }
+        }
+    }
 }

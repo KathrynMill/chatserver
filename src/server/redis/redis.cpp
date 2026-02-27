@@ -1,5 +1,6 @@
 #include "redis.hpp"
 #include <iostream>
+#include <mutex>
 using namespace std;
 
 Redis::Redis()
@@ -52,6 +53,7 @@ bool Redis::connect()
 // 向redis指定的通道channel发布消息
 bool Redis::publish(int channel, string message)
 {
+    std::lock_guard<std::mutex> lock(_publish_mutex);
     redisReply *reply = (redisReply *)redisCommand(_publish_context, "PUBLISH %d %s", channel, message.c_str());
     if (nullptr == reply)
     {

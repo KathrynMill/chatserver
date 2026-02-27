@@ -1,5 +1,6 @@
 #include "db.h"
 #include <muduo/base/Logging.h>
+#include <mutex>
 
 // 数据库配置信息
 static string server = "127.0.0.1";
@@ -7,9 +8,13 @@ static string user = "root";
 static string password = "123456";
 static string dbname = "chat";
 
+// 全局互斥锁，保护 libmysqlclient 在多线程下的安全
+static std::mutex g_mysql_mutex;
+
 // 初始化数据库连接
 MySQL::MySQL()
 {
+    std::lock_guard<std::mutex> lock(g_mysql_mutex);
     _conn = mysql_init(nullptr);
 }
 
@@ -17,12 +22,16 @@ MySQL::MySQL()
 MySQL::~MySQL()
 {
     if (_conn != nullptr)
+    {
+        std::lock_guard<std::mutex> lock(g_mysql_mutex);
         mysql_close(_conn);
+    }
 }
 
 // 连接数据库
 bool MySQL::connect()
 {
+    std::lock_guard<std::mutex> lock(g_mysql_mutex);
     MYSQL *p = mysql_real_connect(_conn, server.c_str(), user.c_str(),
                                   password.c_str(), dbname.c_str(), 3306, nullptr, 0);
     if (p != nullptr)
@@ -42,6 +51,7 @@ bool MySQL::connect()
 // 更新操作
 bool MySQL::update(string sql)
 {
+    std::lock_guard<std::mutex> lock(g_mysql_mutex);
     if (mysql_query(_conn, sql.c_str()))
     {
         LOG_INFO << __FILE__ << ":" << __LINE__ << ":"
@@ -55,6 +65,7 @@ bool MySQL::update(string sql)
 // 查询操作
 MYSQL_RES *MySQL::query(string sql)
 {
+    std::lock_guard<std::mutex> lock(g_mysql_mutex);
     if (mysql_query(_conn, sql.c_str()))
     {
         LOG_INFO << __FILE__ << ":" << __LINE__ << ":"
@@ -62,7 +73,7 @@ MYSQL_RES *MySQL::query(string sql)
         return nullptr;
     }
     
-    return mysql_use_result(_conn);
+    return mysql_store_result(_conn);
 }
 
 // 获取连接

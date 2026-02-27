@@ -14,7 +14,10 @@ include_directories(${PROJECT_SOURCE_DIR}/include/server/db)
 include_directories(${PROJECT_SOURCE_DIR}/include/server/model)
 include_directories(${PROJECT_SOURCE_DIR}/include/server/redis)
 include_directories(${PROJECT_SOURCE_DIR}/thirdparty)
-link_directories(/usr/lib64/mysql)
+include_directories(/usr/include/mariadb)
+include_directories(/tmp/muduo_local/install/include)
+link_directories(/usr/lib/x86_64-linux-gnu/mariadb)
+link_directories(/tmp/muduo_local/install/lib)
 
 # 加载子目录
 add_subdirectory(src)
